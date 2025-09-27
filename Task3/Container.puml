@@ -1,0 +1,57 @@
+@startuml
+!include ../C4_Container.puml
+
+top to bottom direction
+
+Person(customer, "Клиент банка")
+Person(site_visitor, "Посетитель сайта")
+Person(bo_deposits, "Бэк-офис депозитов")
+Person(bo_credits, "Бэк-офис кредитов")
+Person(branch_staff, "Сотрудник отделения")
+Person(call_center_op, "Оператор кол-центра")
+
+System_Ext(telecom_operator, "Оператор связи")
+
+
+System_Boundary(boundary, "Банк «Стандарт»") {
+  System_Boundary(yandex_cloud, "Yandex Cloud") {
+    System(ib, "Интернет-банк (монолит .NET 4.5)", "Платежи, заявки на депозит, UI")
+    System(das, "Deposit Application Service", "Новый сервис .NET/C#, API заявок, ставки (кеш)")
+    System(message_broker, "RabbitMQ", "Очереди событий/заявок")
+    System(sms, "СМС-шлюз телеком-оператора", "Отправка SMS")
+    System(ib_db, "БД интернет-банка", "Yandex Database")
+    System(cache, "Кэш", "Redis")
+  }
+  System(site, "Сайт", "Публичные страницы депозитов, форма лида")
+  System(abs, "АБС (Oracle + PL/SQL, Delphi клиент)", "Учёт счетов и депозитов")
+  System(cc, "Система кол-центра", "CRM/кол-центр")
+  System(abs_adapter, "ABS Adapter", "Новый сервис .NET/C#, интеграция с АБС")
+
+}
+
+Lay_Distance(ib, ib_db, 2)
+Lay_Distance(cc, ib, 2)
+
+Rel(customer, ib, "Просмотр/подача заявки, SMS‑подтверждение")
+Rel(site_visitor, site, "Просмотр ставок, отправка лида")
+Rel(ib, das, "REST/TLS")
+Rel(site, das, "REST/TLS")
+Rel(das, message_broker, "Публикация заявок/команд")
+Rel(message_broker, abs_adapter, "Доставка заявок/команд")
+Rel(abs_adapter, abs, "PL/SQL API (TLS)")
+Rel(abs, abs_adapter, "События статусов")
+Rel(abs_adapter, message_broker, "Публикация событий")
+Rel(message_broker, das, "")
+Rel(das, sms, "Отправка SMS")
+Rel(das, cc, "Создание задач/лидов (REST/webhook)")
+Rel(das, cache, "условия по заявкам, справочная информация")
+Rel(das, ib_db, "")
+Rel(cc, call_center_op, "Работа с лидами")
+Rel(bo_deposits, abs, "Обработка заявок в клиенте АБС")
+Rel(bo_credits, abs, "Оценка риска в клиенте АБС")
+Rel(branch_staff, abs, "Открытие депозитов в отделении")
+Rel(cc, abs, "Создание заявок на депозиты")
+Rel(sms, telecom_operator, "отправка sms")
+Rel(telecom_operator,  sms, "получение sms")
+
+@enduml
