@@ -11,6 +11,7 @@ Person(branch_staff, "Сотрудник отделения")
 Person(call_center_op, "Оператор кол-центра")
 
 System_Ext(telecom_operator, "Оператор связи")
+System_Ext(partner_cc, "Партнёрский кол-центр")
 
 
 System_Boundary(boundary, "Банк «Стандарт»") {
@@ -21,6 +22,8 @@ System_Boundary(boundary, "Банк «Стандарт»") {
     System(sms, "СМС-шлюз телеком-оператора", "Отправка SMS")
     System(ib_db, "БД интернет-банка", "Yandex Database")
     System(cache, "Кэш", "Redis")
+    System(drs, "Deposit Rates Sender", ".NET/C#")
+    System(drs_db, "БД сервиса отправки ставок", "Yandex Database")
   }
   System(site, "Сайт", "Публичные страницы депозитов, форма лида")
   System(abs, "АБС (Oracle + PL/SQL, Delphi клиент)", "Учёт счетов и депозитов")
@@ -31,6 +34,12 @@ System_Boundary(boundary, "Банк «Стандарт»") {
 
 Lay_Distance(ib, ib_db, 2)
 Lay_Distance(cc, ib, 2)
+Lay_Distance(customer, site_visitor, 0)
+Lay_Distance(customer, bo_credits, 2)
+Lay_Distance(customer, bo_deposits, 2)
+Lay_Distance(drs, ib, 0)
+Lay_Distance(drs, drs_db, 0)
+Lay_Distance(drs, das, -1)
 
 Rel(customer, ib, "Просмотр/подача заявки, SMS‑подтверждение")
 Rel(site_visitor, site, "Просмотр ставок, отправка лида")
@@ -38,12 +47,12 @@ Rel(ib, das, "REST/TLS")
 Rel(site, das, "REST/TLS")
 Rel(das, message_broker, "Публикация заявок/команд")
 Rel(message_broker, abs_adapter, "Доставка заявок/команд")
-Rel(abs_adapter, abs, "PL/SQL API (TLS)")
+Rel_Neighbor(abs_adapter, abs, "PL/SQL API (TLS)")
 Rel(abs, abs_adapter, "События статусов")
 Rel(abs_adapter, message_broker, "Публикация событий")
 Rel(message_broker, das, "")
 Rel(das, sms, "Отправка SMS")
-Rel(das, cc, "Создание задач/лидов (REST/webhook)")
+Rel(das, cc, "Создание задач/лидов,\nпередача ставок по депозитам", "(REST/webhook)")
 Rel(das, cache, "условия по заявкам, справочная информация")
 Rel(das, ib_db, "")
 Rel(cc, call_center_op, "Работа с лидами")
@@ -53,5 +62,8 @@ Rel(branch_staff, abs, "Открытие депозитов в отделени�
 Rel(cc, abs, "Создание заявок на депозиты")
 Rel(sms, telecom_operator, "отправка sms")
 Rel(telecom_operator,  sms, "получение sms")
-
+Rel(bo_deposits, das, "XLSX со ставками", "email, whitelist по отправителю")
+Rel(das, drs, "XLSX со ставками", "REST")
+Rel(drs, drs_db, "пишет файл,\nисторию отправлений")
+Rel(drs, partner_cc, "XLSX со ставками", "email, pgp-подпись файла")
 @enduml
